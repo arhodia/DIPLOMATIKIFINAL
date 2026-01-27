@@ -1,10 +1,8 @@
-import React from 'react';
 import { Grid, Box, Typography } from '@mui/material';
-import ChartSection from './ChartSection';
 import TablesSection from './TablesSection'; // Το νέο component για τους πίνακες
 import MetricSection from './MetricSection'; 
-
-
+import ScatterSection from './ScatterSection';
+import GeneralResults from './GeneralResults';
 const ResultsSection = ({ allAlgorithmsData }) => {
   // Ασφάλεια
   if (!allAlgorithmsData || Object.keys(allAlgorithmsData).length === 0) {
@@ -23,11 +21,12 @@ const ResultsSection = ({ allAlgorithmsData }) => {
 
       <Grid container spacing={3}>
         
-        {/* ΑΡΙΣΤΕΡΗ ΣΤΗΛΗ: ΓΡΑΦΗΜΑΤΑ */}
-        <Grid item xs={12}>
-            <ChartSection  allAlgorithmsData={allAlgorithmsData} />
+        <Grid>
+          <></>
+            <GeneralResults allAlgorithmsData={allAlgorithmsData} />
             <MetricSection allAlgorithmsData={allAlgorithmsData} />
             <TablesSection allAlgorithmsData={allAlgorithmsData} />
+            <ScatterSection allAlgorithmsData={allAlgorithmsData}/>
         </Grid>
 
 

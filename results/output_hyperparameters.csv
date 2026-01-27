@@ -1,0 +1,2 @@
+algorithm,best_k,best_seed,best_maxIter,best_sample_frac,best_score
+KMeans,25,42,20,0.5,0.9956270871554751

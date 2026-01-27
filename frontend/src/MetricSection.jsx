@@ -21,20 +21,26 @@ const columns = [
 ];
 
 const MetricsSection = ({ allAlgorithmsData }) => {
-  // Αν δεν υπάρχουν δεδομένα, δεν εμφανίζουμε τίποτα
-  if (!allAlgorithmsData || Object.keys(allAlgorithmsData).length === 0) {
+  // 1. Safer check: ensure the nested property exists before calling Object.keys
+  const results = allAlgorithmsData?.hyperparameters_results;
+
+  if (!results) {
     return null;
   }
 
-  // Μετατροπή των δεδομένων σε λίστα για τον πίνακα
-  // Υποθέτουμε ότι το backend επιστρέφει αυτά τα πεδία (best_k, time, κλπ) μέσα στο αντικείμενο του κάθε αλγορίθμου
-  const rows = Object.entries(allAlgorithmsData).map(([algoName, data]) => {
+  // 2. Based on your screenshot, 'results' is an object with 'algorithm': 'KMeans'
+  // If you expect multiple algorithms, they should be in an array.
+  // If it's just one object, we wrap it in an array to use .map
+  const resultsArray = Array.isArray(results) ? results : [results];
+
+  const rows = resultsArray.map((data) => {
     return {
-      algorithm: algoName,
-      // Χρησιμοποιούμε optional chaining (?. ||) σε περίπτωση που λείπει κάποια τιμή για να μην σκάσει
+      algorithm: data.algorithm ?? 'Unknown',
       best_k: data.best_k ?? '-',
       best_sample_frac: data.best_sample_frac ?? '-',
       best_score: data.best_score ?? 0,
+      // Note: your screenshot doesn't show a 'time' field, 
+      // make sure the backend actually sends it!
       time: data.time ?? 0 
     };
   });
