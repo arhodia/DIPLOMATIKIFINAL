@@ -538,3 +538,76 @@ if __name__ == "__main__":
 #recomended_results.show(5, truncate=False)
 
 
+#---------------------------------------------------------------------------------------------------------------------------------------------------
+# Broadcast Join Κάνουμε Join τα δεδομένα με τα κέντρα βάσει του prediction.Χρησιμοποιούμε broadcast γιατί ο πίνακας των κέντρων είναι πολύ μικρός.
+
+#joined_df = df_with_arrays.join(
+#    broadcast(centers_df), 
+#    df_with_arrays.prediction == centers_df.center_id, 
+#    "left"
+#)
+
+# --- 4. Υπολογισμός Ευκλείδειας Απόστασης με Spark SQL ---Χρησιμοποιούμε native Spark functions (zip_with, aggregate, transform)Τύπος: sqrt( sum( (x - y)^2 ) )
+#distance_expression = """ sqrt(aggregate(zip_with(features_arr, center_vec, (x, y) -> power(x - y, 2)), 0.0D, (acc, x) -> acc + x ) )"""
+
+#final_df = joined_df.withColumn("distance_to_center", expr(distance_expression)).drop("features_arr", "center_id", "center_vec") # Καθαρισμός ενδιάμεσων στηλών
+
+# --- 5. Έλεγχος Αποτελεσμάτων ---
+#final_df.select("company_name", "prediction", "distance_to_center").show(5)
+
+
+#start_name = (start_name or "").strip()
+#researcher_name = (researcher_name or "").strip()
+
+#ορίζω μεταβλητές
+#input_col_name = None
+#input_value = None
+#target_condition = None
+
+
+#if start_name == "" and researcher_name != "":
+#    input_col_name = "researcher_name"
+#    input_value = researcher_name
+    # Στόχος: Ονόματα εταιριών 
+#    target_condition = F.col("company_name").isNotNull()
+#elif researcher_name == ""and start_name != "":
+#    input_col_name = "company_name"
+#    input_value = start_name
+    # Στόχος: Ερευνητές 
+#    target_condition = F.col("researcher_name").isNotNull()
+
+#input_row_list = final_df.filter(F.col(input_col_name) == input_value).collect()
+
+#if not input_row_list:
+#    raise ValueError(f"Δεν βρέθηκε input_value = {input_value}")
+
+   
+#input_row = input_row_list[0]
+#input_id = input_row["id"] 
+#cluster_id = input_row["prediction"]
+#input_industry = input_row["industry"]
+#input_industry_norm = (input_industry or "").strip().lower()
+
+
+#potential_matches = final_df.filter((F.col("prediction") == cluster_id) & target_condition &(F.col("id") != input_id))
+
+#industry_match_condition = F.lower(F.trim(F.col("industry"))) == F.lit(input_industry_norm)
+
+# 1o DF: Top Results
+#top_results = (potential_matches.filter(industry_match_condition).orderBy(F.col("distance_to_center").asc_nulls_last()))
+# --- ΜΕΤΡΗΣΗ ΠΛΗΘΟΥΣ ---
+#count_top = top_results.count()
+#print(f"--- TOP RESULTS (Total Rows: {count_top}) ---")
+# Εμφάνιση των πρώτων 5
+#top_results.show(5, truncate=False)
+
+
+
+# 2o DF: Recommended Results
+#recomended_results = (potential_matches.filter(~industry_match_condition).orderBy(F.col("distance_to_center").asc_nulls_last()))
+# --- ΜΕΤΡΗΣΗ ΠΛΗΘΟΥΣ ---
+#count_rec = recomended_results.count()
+#print(f"--- RECOMMENDED RESULTS (Total Rows: {count_rec}) ---")
+#recomended_results.show(5, truncate=False)
+
+

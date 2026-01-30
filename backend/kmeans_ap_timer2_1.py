@@ -497,6 +497,9 @@ def run_logic(input_industry, input_radioOption, input_algorithms, input_name, i
     df_lsh_brp = None
     df_lsh_minihash = None
     potential_matches_df = None 
+    # ΑΡΧΙΚΟΠΟΙΗΣΗ ΩΣ NONE ΓΙΑ ΑΠΟΦΥΓΗ UnboundLocalError
+    final_top_matches_dict = {} 
+    final_rec_matches_dict = {}
     
     df_hyperparameters_clustering = pd.DataFrame(columns=["algorithm", "best_k", "best_seed", "best_maxIter", "best_sample_frac", "best_score"])
 
@@ -513,6 +516,24 @@ def run_logic(input_industry, input_radioOption, input_algorithms, input_name, i
             df_hyperparameters_clustering = pd.concat([df_hyperparameters_clustering, df_hyper], ignore_index=True)
             execution_time.append([algo, time_clustering])
 
+           # Προσθήκη στήλης με το όνομα του αλγορίθμου
+            if top_matches_df:
+                top_matches_df = top_matches_df.withColumn("algorithm_used", lit(algo))
+                
+                # ΚΑΘΑΡΙΣΜΟΣ: Αφαιρούμε τις στήλες που περιέχουν Vectors πριν το toPandas()
+                cols_to_drop = ["features", "features_norm", "features_sparse", "features_arr"]
+                clean_df = top_matches_df.drop(*[c for c in cols_to_drop if c in top_matches_df.columns])
+                
+                final_top_matches_dict[algo] = clean_df.toPandas().fillna(0).to_dict(orient='records')
+            
+            # ΕΔΩ Η ΔΙΟΡΘΩΣΗ: Χρήση του σωστού ονόματος 'recommended_matches_df'
+            if recommended_matches_df:
+                recommended_matches_df = recommended_matches_df.withColumn("algorithm_used", lit(algo))
+                
+                # ΚΑΘΑΡΙΣΜΟΣ: Παρομοίως για τα recommended
+                clean_rec_df = recommended_matches_df.drop(*[c for c in cols_to_drop if c in recommended_matches_df.columns])
+                
+                final_rec_matches_dict[algo] = clean_rec_df.toPandas().fillna(0).to_dict(orient='records')
         elif algo == 'LSH_BRP':
             df_lsh_brp, time_lsh_brp = run_lsh_brp(feature_df, input_name, input_neighbor)
             execution_time.append([algo, time_lsh_brp])
@@ -525,7 +546,7 @@ def run_logic(input_industry, input_radioOption, input_algorithms, input_name, i
         print(f"Algorithm: {result[0]}, Time: {result[1]:.4f} sec")
 
     print(df_hyperparameters_clustering)
-    return df_hyperparameters_clustering,  top_matches_df, recommended_matches_df, execution_time, df_lsh_brp, df_lsh_minihash, all_charts
+    return df_hyperparameters_clustering, final_top_matches_dict, final_rec_matches_dict, execution_time, df_lsh_brp, df_lsh_minihash, all_charts
 
 # --- Main Spark Init ---
 CORES = 4
@@ -588,6 +609,14 @@ if __name__ == "__main__":
     print("---------------------------------------")
 
     if params:
+        # ΚΑΘΑΡΙΣΜΟΣ ΠΑΛΙΩΝ ΑΠΟΤΕΛΕΣΜΑΤΩΝ ΠΡΙΝ ΤΗΝ ΕΚΤΕΛΕΣΗ
+        results_path = "/data/results/"
+        if not os.path.exists(results_path):
+            os.makedirs(results_path)
+        for f in os.listdir(results_path):
+            file_path = os.path.join(results_path, f)
+            if os.path.isfile(file_path):
+                os.unlink(file_path)
         # 2. Τρέχουμε τη λογική
         df_hyper, top_matches, rec_matches, exec_time, df_brp, df_minihash, charts = run_logic(**params)
         
@@ -600,13 +629,14 @@ if __name__ == "__main__":
         if df_hyper is not None:
             df_hyper.to_csv("/data/results/output_hyperparameters.csv", index=False)
 
-        # Β. Matches (Είναι Spark DataFrame -> Το κάνουμε Pandas για να σωθεί ως ένα CSV)
-        if top_matches is not None:
-            top_matches.toPandas().to_csv("/data/results/output_top_matches.csv", index=False)
+        # Β. Matches (Είναι πλέον Λεξικά -> Σώζονται ως JSON για να διατηρηθεί ο διαχωρισμός KMeans/Bisecting)
+        if top_matches: # top_matches είναι το final_top_matches_dict
+            with open('/data/results/output_top_matches.json', 'w') as f:
+                json.dump(top_matches, f)
             
-        if rec_matches is not None:
-            rec_matches.toPandas().to_csv("/data/results/output_recommended.csv", index=False)
-
+        if rec_matches: # rec_matches είναι το final_rec_matches_dict
+            with open('/data/results/output_recommended.json', 'w') as f:
+                json.dump(rec_matches, f)
         # Γ. LSH Results
         if df_brp is not None:
             df_brp.toPandas().to_csv("/data/results/output_lsh_brp.csv", index=False)
@@ -628,10 +658,6 @@ if __name__ == "__main__":
             print(f"Error saving charts: {e}")
 
         print("--- Success: All files saved. ---")
-        # Προσθήκη καθυστέρησης για έλεγχο του UI
-        import time
-        print("Waiting for 60 seconds before closing for Spark UI access...")
-        time.sleep(60)
 
     else:
         print("Error: Could not load parameters.")
@@ -642,78 +668,5 @@ if __name__ == "__main__":
 
 
 
-
-
-#---------------------------------------------------------------------------------------------------------------------------------------------------
-# Broadcast Join Κάνουμε Join τα δεδομένα με τα κέντρα βάσει του prediction.Χρησιμοποιούμε broadcast γιατί ο πίνακας των κέντρων είναι πολύ μικρός.
-
-#joined_df = df_with_arrays.join(
-#    broadcast(centers_df), 
-#    df_with_arrays.prediction == centers_df.center_id, 
-#    "left"
-#)
-
-# --- 4. Υπολογισμός Ευκλείδειας Απόστασης με Spark SQL ---Χρησιμοποιούμε native Spark functions (zip_with, aggregate, transform)Τύπος: sqrt( sum( (x - y)^2 ) )
-#distance_expression = """ sqrt(aggregate(zip_with(features_arr, center_vec, (x, y) -> power(x - y, 2)), 0.0D, (acc, x) -> acc + x ) )"""
-
-#final_df = joined_df.withColumn("distance_to_center", expr(distance_expression)).drop("features_arr", "center_id", "center_vec") # Καθαρισμός ενδιάμεσων στηλών
-
-# --- 5. Έλεγχος Αποτελεσμάτων ---
-#final_df.select("company_name", "prediction", "distance_to_center").show(5)
-
-
-#start_name = (start_name or "").strip()
-#researcher_name = (researcher_name or "").strip()
-
-#ορίζω μεταβλητές
-#input_col_name = None
-#input_value = None
-#target_condition = None
-
-
-#if start_name == "" and researcher_name != "":
-#    input_col_name = "researcher_name"
-#    input_value = researcher_name
-    # Στόχος: Ονόματα εταιριών 
-#    target_condition = F.col("company_name").isNotNull()
-#elif researcher_name == ""and start_name != "":
-#    input_col_name = "company_name"
-#    input_value = start_name
-    # Στόχος: Ερευνητές 
-#    target_condition = F.col("researcher_name").isNotNull()
-
-#input_row_list = final_df.filter(F.col(input_col_name) == input_value).collect()
-
-#if not input_row_list:
-#    raise ValueError(f"Δεν βρέθηκε input_value = {input_value}")
-
-   
-#input_row = input_row_list[0]
-#input_id = input_row["id"] 
-#cluster_id = input_row["prediction"]
-#input_industry = input_row["industry"]
-#input_industry_norm = (input_industry or "").strip().lower()
-
-
-#potential_matches = final_df.filter((F.col("prediction") == cluster_id) & target_condition &(F.col("id") != input_id))
-
-#industry_match_condition = F.lower(F.trim(F.col("industry"))) == F.lit(input_industry_norm)
-
-# 1o DF: Top Results
-#top_results = (potential_matches.filter(industry_match_condition).orderBy(F.col("distance_to_center").asc_nulls_last()))
-# --- ΜΕΤΡΗΣΗ ΠΛΗΘΟΥΣ ---
-#count_top = top_results.count()
-#print(f"--- TOP RESULTS (Total Rows: {count_top}) ---")
-# Εμφάνιση των πρώτων 5
-#top_results.show(5, truncate=False)
-
-
-
-# 2o DF: Recommended Results
-#recomended_results = (potential_matches.filter(~industry_match_condition).orderBy(F.col("distance_to_center").asc_nulls_last()))
-# --- ΜΕΤΡΗΣΗ ΠΛΗΘΟΥΣ ---
-#count_rec = recomended_results.count()
-#print(f"--- RECOMMENDED RESULTS (Total Rows: {count_rec}) ---")
-#recomended_results.show(5, truncate=False)
 
 

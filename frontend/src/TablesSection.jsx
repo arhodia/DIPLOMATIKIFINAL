@@ -1,5 +1,9 @@
 import React, { useState } from 'react';
 import { 
+  Box, 
+  Container, 
+  ThemeProvider, 
+  CssBaseline, 
   Paper, 
   Table, 
   TableBody, 
@@ -8,30 +12,28 @@ import {
   TableHead, 
   TablePagination, 
   TableRow, 
-  Typography, 
-  Box, 
-  Divider,
-  Link 
+  Typography 
 } from '@mui/material';
+import { darkTheme } from './theme';
 
-// Ορισμός στηλών με βάση τα κόκκινα υπογραμμισμένα πεδία στα screenshots
+// Ορισμός των στηλών βάσει των απαιτήσεών σου
 const columns = [
-  { id: 'researcher_name', label: 'Researcher Name', minWidth: 80 },
-  { id: 'university', label: 'University', minWidth: 80 },
-  { id: 'age', label: 'Age', minWidth: 50 },
-  { id: 'source_type', label: 'Type', minWidth: 80 },
-  { id: 'company_name', label: 'Company', minWidth: 80 },
-  { id: 'industry', label: 'Industry', minWidth: 120 },
-  { id: 'city', label: 'City', minWidth: 80 },
-  { id: 'state', label: 'State', minWidth: 60 },
-  // Για τα URL και Profile, μπορούμε να τα δείξουμε ως απλό κείμενο ή Link
-  { id: 'url', label: 'URL', minWidth: 100 },
-  { id: 'profile', label: 'Profile', minWidth: 100 },
+  { id: 'id', label: 'ID', minWidth: 70 },
+  { id: 'researcher_id', label: 'Researcher ID', minWidth: 100 },
+  { id: 'researcher_name', label: 'Name', minWidth: 130 },
+  { id: 'surname', label: 'Surname', minWidth: 130 },
+  { id: 'source_type', label: 'Source Type', minWidth: 120 },
+  { id: 'age', label: 'Age', minWidth: 70 },
+  { id: 'profile', label: 'Profile', minWidth: 150 },
+  { id: 'company_name', label: 'Company', minWidth: 150 },
+  { id: 'url', label: 'URL', minWidth: 150 },
+  { id: 'distance_to_center', label: 'Distance', minWidth: 100, align: 'right' },
 ];
 
-const AlgorithmTable = ({ rows, algoName }) => {
+// Ξεχωριστό component για τον πίνακα ώστε να επαναχρησιμοποιηθεί
+const StickyTable = ({ title, data }) => {
   const [page, setPage] = useState(0);
-  const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [rowsPerPage, setRowsPerPage] = useState(10);
 
   const handleChangePage = (event, newPage) => {
     setPage(newPage);
@@ -42,109 +44,106 @@ const AlgorithmTable = ({ rows, algoName }) => {
     setPage(0);
   };
 
-  return (
-    <Paper sx={{ width: '100%', maxWidth: '100%', margin: 'auto', overflow: 'hidden', boxShadow: 4 }}>
-      <TableContainer sx={{ maxHeight: 440, overflowX: 'auto' }}> 
-        <Table stickyHeader size="small" aria-label={`${algoName} table`}>
-          <TableHead>
-            <TableRow>
-              {columns.map((column) => (
-                <TableCell
-                  key={column.id}
-                  align={column.align}
-                  style={{ minWidth: column.minWidth }}
-                  sx={{ 
-                    fontWeight: 'bold', 
-                    bgcolor: '#333', 
-                    color: 'white',
-                    whiteSpace: 'nowrap', // Για να μην σπάει το header
-                    py: 1 
-                  }}
-                >
-                  {column.label}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {rows
-              .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-              .map((row, index) => {
-                return (
-                  // Χρήση του index ως key γιατί τα ID μπορεί να είναι nan
-                  <TableRow hover role="checkbox" tabIndex={-1} key={index}>
-                    {columns.map((column) => {
-                      const value = row[column.id];
-                      
-                      // Έλεγχος για "καθάρισμα" τιμών (nan, null, None)
-                      let displayValue = value;
-                      if (value === null || value === undefined || value === 'nan' || value === 'None') {
-                        displayValue = '-';
-                      }
-
-                      return (
-                        <TableCell key={column.id} align={column.align}>
-                          {/* Ειδικός χειρισμός αν θέλουμε τα URL να είναι clickable */}
-                          {(column.id === 'url' || column.id === 'profile') && displayValue !== '-' ? (
-                             <span style={{ fontSize: '0.85rem', color: '#14575c' }}>{displayValue}</span>
-                          ) : (
-                             displayValue
-                          )}
-                        </TableCell>
-                      );
-                    })}
-                  </TableRow>
-                );
-              })}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      <TablePagination
-        rowsPerPageOptions={[5, 10, 25]}
-        component="div"
-        count={rows.length}
-        rowsPerPage={rowsPerPage}
-        page={page}
-        onPageChange={handleChangePage}
-        onRowsPerPageChange={handleChangeRowsPerPage}
-      />
-    </Paper>
-  );
-};
-
-const TablesSection = ({ allAlgorithmsData }) => {
-  if (!allAlgorithmsData || Object.keys(allAlgorithmsData).length === 0) {
-    return null; 
-  }
-
-  const algorithmsList = Object.entries(allAlgorithmsData);
+  if (!data || data.length === 0) return null;
 
   return (
-    <Box sx={{ pb: 5, width: '100%' }}>
-      <Typography variant="h5" sx={{ mb: 3, textAlign: 'center', fontWeight: 'bold' }}>
-        Αποτελέσματα Ταξινόμησης (Matching Results)
+    <Box sx={{ mb: 4 }}>
+      <Typography variant="h6" gutterBottom sx={{ color: 'white', ml: 1 }}>
+        {title}
       </Typography>
-
-      {algorithmsList.map(([algoName, algoContent], index) => {
-        // Τραβάμε τα δεδομένα από το 'matching_results'
-        const rows = algoContent.matching_results || [];
-        
-        if (rows.length === 0) return null;
-
-        return (
-          <Box key={algoName} sx={{ mb: 6, px: 2 }}>
-            <Typography variant="h6" sx={{ mb: 2, color: '#a4bd4a', fontWeight: 'bold' }}>
-              Αλγόριθμος: {algoName}
-            </Typography>
-
-            <AlgorithmTable rows={rows} algoName={algoName} />
-            
-            {index < algorithmsList.length - 1 && <Divider sx={{ my: 4 }} />}
-          </Box>
-        );
-      })}
+      <Paper sx={{ width: '100%', overflow: 'hidden', bgcolor: 'background.paper' }}>
+        <TableContainer sx={{ maxHeight: 440 }}>
+          <Table stickyHeader aria-label="sticky table">
+            <TableHead>
+              <TableRow>
+                {columns.map((column) => (
+                  <TableCell
+                    key={column.id}
+                    align={column.align}
+                    style={{ minWidth: column.minWidth }}
+                  >
+                    {column.label}
+                  </TableCell>
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {data
+                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
+                .map((row, index) => {
+                  return (
+                    <TableRow hover role="checkbox" tabIndex={-1} key={row.id || index}>
+                      {columns.map((column) => {
+                        const value = row[column.id];
+                        return (
+                          <TableCell key={column.id} align={column.align}>
+                            {value !== undefined && value !== null ? value : '-'}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  );
+                })}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        <TablePagination
+          rowsPerPageOptions={[10, 25, 100]}
+          component="div"
+          count={data.length}
+          rowsPerPage={rowsPerPage}
+          page={page}
+          onPageChange={handleChangePage}
+          onRowsPerPageChange={handleChangeRowsPerPage}
+        />
+      </Paper>
     </Box>
   );
 };
 
-export default TablesSection;
+const TableSection = ({ allAlgorithmsData, tableType, dataType }) => {
+  // 1. Εξασφαλίζουμε ότι παίρνουμε το σωστό τύπο (γιατί στο ResultsSection χρησιμοποιείς και τα δύο ονόματα props)
+  const activeType = tableType || dataType;
+
+  // 2. Εξαγωγή των δεδομένων με ασφάλεια (fallback σε άδειο πίνακα [])
+  const brpData = allAlgorithmsData?.Classification_Results?.lsh_brp || [];
+  const minihashData = allAlgorithmsData?.Classification_Results?.lsh_minihash || [];
+
+  // 3. Ορισμός του currentData βάσει του τι ζητήθηκε
+  const currentData = activeType === 'brp' ? brpData : minihashData;
+
+  return (
+    <ThemeProvider theme={darkTheme}>
+      <CssBaseline />
+      <Box sx={{ width: '100%', mt: 1 }}>
+        
+        {/* Έλεγχος αν υπάρχουν δεδομένα στον πίνακα */}
+        {currentData && currentData.length > 0 ? (
+          <StickyTable 
+            title={activeType === 'brp' ? "LSH BRP Results" : "LSH Minihash Results"} 
+            data={currentData} 
+          />
+        ) : (
+          /* Εμφάνιση μηνύματος αν ο πίνακας είναι άδειος */
+          <Box 
+            sx={{ 
+              p: 4,               // Αυξήθηκε λίγο το padding για καλύτερη αίσθηση κενού χώρου
+              textAlign: 'center', 
+              border: 'none',     // Αφαίρεση του πλαισίου
+              borderRadius: 2,
+              boxShadow: '0px 10px 15px -10px rgba(0,0,0,0.5)',
+              bgcolor: 'transparent' // Ή κράτα το 'rgba(255,255,255,0.02)' αν θες ελαφρύ φόντο
+            }}
+          >
+            <Typography  sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+              Δεν υπάρχουν διαθέσιμα δεδομένα για το συγκεκριμένο αλγόριθμο
+            </Typography>
+          </Box>
+        )}
+
+      </Box>
+    </ThemeProvider>
+  );
+};
+
+export default TableSection;

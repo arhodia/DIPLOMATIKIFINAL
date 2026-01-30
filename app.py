@@ -183,7 +183,7 @@ def test():
         print(f"ERROR executing docker command: {e}")
         return jsonify({"error": "Docker execution failed"}), 500
 
-# --- ΒΗΜΑ 3: Ανάγνωση Αποτελεσμάτων (ΔΙΟΡΘΩΜΕΝΟ) ---
+    # --- ΒΗΜΑ 3: Ανάγνωση Αποτελεσμάτων (ΔΙΟΡΘΩΜΕΝΟ) ---
     results_dir = os.path.join(base_path, "results")
 
     # Helper function: Αναδρομικός καθαρισμός NaN -> None
@@ -209,54 +209,33 @@ def test():
                 return {}
         return {}
 
-    # Helper function για ασφαλές διάβασμα CSV
+
     def read_csv_safe(filename):
         path = os.path.join(results_dir, filename)
         if os.path.exists(path):
             try:
                 df = pd.read_csv(path)
-                # Αντικατάσταση NaN με None (null στο JSON)
-                df = df.where(pd.notnull(df), None)
+                df = df.where(pd.notnull(df), None) # Μετατροπή NaNs σε null για το JSON
                 return df.to_dict(orient='records')
             except Exception as e:
                 print(f"Error reading {filename}: {e}")
                 return []
         return []
 
-    # 1. Hyperparameters
-    hyperparams_list = read_csv_safe("output_hyperparameters.csv")
-    hyperparams_dict = hyperparams_list[0] if hyperparams_list else {}
-
-    # 2. Matches
-    top_matches_df = read_csv_safe("output_top_matches.csv")
-    recommended_matches_df = read_csv_safe("output_recommended.csv")
-
-    # 3. Execution Time
-    exec_time_dict = read_json_safe("output_time.json")
-
-    # 4. Visual Data
-    clean_visual_data = read_json_safe("output_charts.json")
-
-    # 5. LSH Results
-    lsh_brp_dict = read_csv_safe("output_lsh_brp.csv")
-    lsh_minihash_dict = read_csv_safe("output_lsh_minihash.csv")
-
-    # Συγκέντρωση όλων των δεδομένων σε ένα dictionary
+    # Διαβάζουμε τα αποτελέσματα
+    # Αν ο χρήστης δεν επέλεξε LSH, το read_csv_safe θα επιστρέψει [] γιατί το αρχείο διαγράφηκε στην αρχή
     response_data = {
-        "hyperparameters": hyperparams_dict,
-        "top_matches": top_matches_df,
-        "recommended_matches": recommended_matches_df,
-        "execution_time": exec_time_dict,
-        "lsh_brp": lsh_brp_dict,
-        "lsh_minihash": lsh_minihash_dict,
-        "visual_data": clean_visual_data
+        "hyperparameters": read_csv_safe("output_hyperparameters.csv"),
+        # ΑΛΛΑΓΗ ΕΔΩ: Χρήση read_json_safe και κατάληξης .json
+        "top_matches": read_json_safe("output_top_matches.json"), 
+        "recommended_matches": read_json_safe("output_recommended.json"),
+        "execution_time": read_json_safe("output_time.json"),
+        "lsh_brp": read_csv_safe("output_lsh_brp.csv"),
+        "lsh_minihash": read_csv_safe("output_lsh_minihash.csv"),
+        "visual_data": read_json_safe("output_charts.json")
     }
 
-    # ΤΕΛΙΚΟΣ ΚΑΘΑΡΙΣΜΟΣ: Περνάμε όλο το response από τη clean_nans
-    # Αυτό εξασφαλίζει ότι κανένα NaN δεν θα φύγει προς το frontend
-    final_response = clean_nans(response_data)
-
-    return jsonify(final_response)
+    return jsonify(clean_nans(response_data))
 """
 @app.post("/api/upload")
 def upload():

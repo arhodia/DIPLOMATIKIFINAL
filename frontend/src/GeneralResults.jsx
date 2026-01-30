@@ -1,56 +1,96 @@
 import React from 'react';
 import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  Paper, 
-  Typography,
-  Box 
+  Box, Typography, Paper, Table, TableBody, TableCell, 
+  TableContainer, TableHead, TableRow 
 } from '@mui/material';
 
+const columns = [
+  { id: 'algorithm', label: 'Algorithm', minWidth: 170 },
+  { 
+    id: 'time', 
+    label: 'Time (sec)', 
+    minWidth: 100, 
+    align: 'right',
+    format: (value) => (typeof value === 'number' ? value.toFixed(4) : value),
+  },
+];
+
 const GeneralResults = ({ allAlgorithmsData }) => {
-  // Ανάκτηση του execution_time από τα δεδομένα
-  const executionTimes = allAlgorithmsData?.execution_time || [];
+  // 1. Πρόσβαση στα δεδομένα βάσει του screenshot
+  const rawData = allAlgorithmsData?.Classification_Results?.execution_time || [];
+
+  // 2. Mapping των δεδομένων
+  const rows = rawData.map((item, index) => ({
+    id: index,
+    algorithm: item[0] || 'Unknown',
+    time: item[1] ?? 0,
+  }));
 
   return (
-    <Box sx={{ mb: 4 }}>
-      <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold' }}>
+    <Box sx={{ mb: 4, width: '100%' }}>
+      <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', color: 'white', textAlign: 'center' }}>
         Algorithm Execution Time
       </Typography>
-      
-      <TableContainer component={Paper} sx={{ maxWidth: 400, boxShadow: 2 }}>
-        <Table size="small" aria-label="execution time table">
-          <TableHead sx={{ backgroundColor: '#f5f5f5' }}>
-            <TableRow>
-              <TableCell sx={{ fontWeight: 'bold' }}>Algorithm</TableCell>
-              <TableCell align="right" sx={{ fontWeight: 'bold' }}>Time (sec)</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {executionTimes.length > 0 ? (
-              executionTimes.map((row, index) => (
-                <TableRow key={index} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                  <TableCell component="th" scope="row">
-                    {row.algorithm}
+
+      <Paper sx={{ 
+        width: '100%', 
+        overflow: 'hidden', 
+        boxShadow: 3, 
+        bgcolor: '#1e1e1e', // Σκούρο background για να δένει με το dashboard
+        backgroundImage: 'none',
+        border: '1px solid #333'
+      }}>
+        <TableContainer>
+          <Table stickyHeader size="small">
+            <TableHead>
+              <TableRow>
+                {columns.map((column) => (
+                  <TableCell
+                    key={column.id}
+                    align={column.align}
+                    style={{ 
+                      minWidth: column.minWidth,
+                      backgroundColor: '#252525', // Ελαφρώς πιο ανοιχτό γκρι για το header
+                      color: '#fff',
+                      fontWeight: 'bold',
+                      borderBottom: '2px solid #444'
+                    }}
+                  >
+                    {column.label}
                   </TableCell>
-                  <TableCell align="right">
-                    {row.time.toFixed(4)}
+                ))}
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {rows.length > 0 ? (
+                rows.map((row) => (
+                  <TableRow hover key={row.id} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
+                    {columns.map((column) => {
+                      const value = row[column.id];
+                      return (
+                        <TableCell 
+                          key={column.id} 
+                          align={column.align}
+                          sx={{ color: '#e0e0e0', borderBottom: '1px solid #333' }}
+                        >
+                          {column.format ? column.format(value) : value}
+                        </TableCell>
+                      );
+                    })}
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={2} align="center" sx={{ color: '#888', py: 3 }}>
+                    No execution data available.
                   </TableCell>
                 </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={2} align="center">
-                  There is no time data
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+        {/* Αφαιρέσαμε το TablePagination αφού τα rows είναι < 5 */}
+      </Paper>
     </Box>
   );
 };
