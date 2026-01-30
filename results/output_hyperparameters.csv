@@ -1,1 +1,3 @@
 algorithm,best_k,best_seed,best_maxIter,best_sample_frac,best_score
+KMeans,25,123,20,1.0,0.9897327854553357
+BisectingKMeans,21,123,20,1.0,0.8941544654214804

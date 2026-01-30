@@ -8,7 +8,7 @@ import GeneralResults from './GeneralResults';
 import MetricSection from './MetricSection';
 import TablesSection from './TablesSection';
 import ScatterSection from './ScatterSection';
-import ChartSection from './ChartSection';
+import TableClustering from './TableClustering';
 
 
 
@@ -70,51 +70,90 @@ const ResultsSection = ({ allAlgorithmsData }) => {
                         Results (K-Means/Bisecting)
                       </Typography>
 
-                    {/* Κεντρικό Container για το 50-50 split */}
-                    <Grid container spacing={2}>
-                      
-                      {/* Αριστερή Στήλη (50%) */}
-                      <Grid size={6}>
-                        <Grid container spacing={2} direction="column">
-                          {/* 1η Γραμμή Αριστερά: Scatter Section */}
-                          <Grid>
-                            <Item>
-                              <ScatterSection allAlgorithmsData={allAlgorithmsData} />
-                            </Item>
-                          </Grid>
+                        {/* Κεντρικό Container για το 50-50 split */}
+                        <Grid container spacing={2}>
                           
-                          {/* 2η Γραμμή Αριστερά: Tables Section (Μεταφέρθηκε εδώ) */}
-                          <Grid>
-                            <Item>
-                              <div>2η Γραμμή Αριστερά</div>
-                            </Item>
+                          {/* Αριστερή Στήλη (50%) */}
+                          <Grid size={6}>
+                            <Grid container spacing={2} direction="column">
+                              {/* 1η Γραμμή Αριστερά: KMeans Scatter */}
+                              <Grid>
+                                <Item>
+                                  <ScatterSection 
+                                    allAlgorithmsData={allAlgorithmsData} 
+                                    algorithmType="KMeans" 
+                                  />
+                                </Item>
+                              </Grid>
+                              
+                              {/* 2η Γραμμή Αριστερά: Tables Section */}
+                              <Grid size={12}>
+                                <Grid >
+                                  <Item>
+                                    <TableClustering 
+                                      allAlgorithmsData={allAlgorithmsData} 
+                                      algorithm="KMeans" 
+                                      resultType="matching_results" 
+                                    />
+                                  </Item>
+                                </Grid>
+
+                                <Grid >
+                                  <Item>
+                                    <TableClustering 
+                                      allAlgorithmsData={allAlgorithmsData} 
+                                      algorithm="KMeans" 
+                                      resultType="recommended_results"
+                                    />
+                                  </Item>
+                                </Grid>
+                              </Grid>
+
+                            </Grid>
                           </Grid>
+
+                          {/* Δεξιά Στήλη (50%) */}
+                          <Grid size={6}>
+                            <Grid container spacing={2} direction="column">
+                              {/* 1η Γραμμή Δεξιά: BisectingKMeans Scatter */}
+                              <Grid>
+                                <Item>
+                                  <ScatterSection 
+                                    allAlgorithmsData={allAlgorithmsData} 
+                                    algorithmType="BisectingKMeans" 
+                                  />
+                                </Item>
+                              </Grid>
+                              
+                              {/* 2η Γραμμή Αριστερά: Tables Section */}
+                               <Grid size={12}>
+                                <Grid >
+                                  <Item>
+                                    <TableClustering 
+                                      allAlgorithmsData={allAlgorithmsData} 
+                                      algorithm="BisectingKMeans" 
+                                      resultType="matching_results" 
+                                    />
+                                  </Item>
+                                </Grid>
+
+                                <Grid >
+                                  <Item>
+                                    <TableClustering 
+                                      allAlgorithmsData={allAlgorithmsData} 
+                                      algorithm="BisectingKMeans" 
+                                      resultType="recommended_results"
+                                    />
+                                  </Item>
+                                </Grid>
+                              </Grid>
+                            
+                              {/* Υπόλοιπο περιεχόμενο δεξιάς στήλης αν υπάρχει */}
+                            </Grid>
+                          </Grid>
+
                         </Grid>
-                      </Grid>
-
-                      {/* Δεξιά Στήλη (50%) */}
-                      <Grid size={6}>
-                        <Grid container spacing={2} direction="column">
-                          {/* 1η Γραμμή Δεξιά */}
-                          <Grid>
-                            <Item>
-                              {/* Περιεχόμενο για την 1η γραμμή δεξιά */}
-                              <div>1η Γραμμή Δεξιά</div>
-                            </Item>
-                          </Grid>
-
-                          {/* 2η Γραμμή Δεξιά */}
-                          <Grid>
-                            <Item>
-                              {/* Περιεχόμενο για την 2η γραμμή δεξιά */}
-                              <div>2η Γραμμή Δεξιά</div>
-                            </Item>
-                          </Grid>
-                        </Grid>
-                      </Grid>
-
                     </Grid>
-                     </Grid>
 
                     </Grid>
                   </Item>

@@ -1,2 +1,2 @@
 industry,algorithms,radioOption,name,neighbor,k_min,k_max,seed,maxIter,sample_frac
-advertising   marketing,LSH_BRP,start-up,MuteSix,5,,,,,
+advertising   marketing,"KMeans,BisectingKMeans,LSH_MinHash,LSH_BRP",start-up,MuteSix,12,,,,,
