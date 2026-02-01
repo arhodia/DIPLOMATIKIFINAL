@@ -46,7 +46,7 @@ const TableClustering = ({ allAlgorithmsData, algorithm, resultType }) => {
                   }}
                 >
         <Typography sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
-          Δεν έχει γίνει η εκτέλεση του αλγορίθμου {algorithm} για τα {resultType.replace('_', ' ')}
+          Δεν υπάρχουν {resultType.replace('_', ' ')} για τον  {algorithm}
         </Typography>
       </Box>
     );
@@ -59,7 +59,7 @@ const TableClustering = ({ allAlgorithmsData, algorithm, resultType }) => {
         <Typography variant="subtitle1" sx={{ p: 2, fontWeight: 'bold', textTransform: 'capitalize' }}>
           {resultType.replace('_', ' ')} - {algorithm}
         </Typography>
-        <TableContainer sx={{ maxHeight: 440 }}>
+        <TableContainer sx={{ height: 400, overflow: 'auto' }}>
           <Table stickyHeader aria-label="sticky table">
             <TableHead>
               <TableRow>

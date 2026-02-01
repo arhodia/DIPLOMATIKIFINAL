@@ -20,6 +20,7 @@ import pandas as pd
 import json
 import os
 matplotlib.use('Agg')
+from pyspark.sql.functions import lit
 # --- Βοηθητικές Συναρτήσεις (Plot, Parse, Join, Preprocessing, Tune) ---
 # Αυτές παραμένουν ίδιες, τις αφήνω ως έχουν για συντομία, 
 # εστιάζουμε στις αλλαγές από το find_best_k και κάτω.
@@ -202,25 +203,49 @@ def parse_parameter():
         "input_k_max": row['k_max'],
         "input_seed": row['seed'],
         "input_maxIter": row['maxIter'],
-        "input_sample_frac": row['sample_frac']
+        "input_sample_frac": row['sample_frac'],
+        "input_file_size":row['file_size']
     }
     
     return params
                 
-def parse_data():
-    # Προσαρμόστε τα paths ανάλογα με το περιβάλλον σας
-    startups_df = spark.read.format("csv").option("header", "true").option("inferSchema", "true")\
-                .load("/data/INC 5000 Companies 2019.csv")
-                #.load('/mnt/c/Users/arhod/Desktop/DIPLOMATIKIFINAL/INC 5000 Companies 2019.csv')
-                
+def parse_data(input_file_size):
+    if input_file_size is None:
+        input_file_size = 5000
+
+    if input_file_size == 5000:
+        researchers_path = '/data/synthetic_files/synthetic_researchers_5000_base.csv'
+    elif input_file_size == 20000:
+        researchers_path = '/data/synthetic_files/synthetic_researchers_20000_inc5000dist.csv'
+    elif input_file_size == 50000:
+        researchers_path = '/data/synthetic_files/synthetic_researchers_50000_inc5000dist.csv'
+    else:
+        # This will now only trigger if a WRONG number is provided
+        raise ValueError("Unsupported input_file_size. Choose 5000, 20000, or 50000.")
+
+    # 2. Φόρτωση των Startups (παραμένει σταθερό)
+    startups_df = spark.read.format("csv") \
+        .option("header", "true") \
+        .option("inferSchema", "true") \
+        .load("/data/INC 5000 Companies 2019.csv")
     
-    researchers_df = spark.read.format("csv").option("header", "true").option("inferSchema", "true")\
-                .load('/data/synthetic_files/synthetic_researchers_20000_inc5000dist.csv')
-                #.load('/mnt/c/Users/arhod/Desktop/DIPLOMATIKIFINAL/synthetic_files/synthetic_researchers_20000_inc5000dist.csv')
-                
+    # 3. Φόρτωση των Researchers με το δυναμικό path
+    researchers_df = spark.read.format("csv") \
+        .option("header", "true") \
+        .option("inferSchema", "true") \
+        .load(researchers_path)
     
-    companies_clean = startups_df.withColumnRenamed("name", "company_name").withColumnRenamed("id", "company_id").withColumnRenamed("industry", "company_industry").withColumn("source_type", lit("start-up")) 
-    researchers_clean = researchers_df.withColumnRenamed("name", "researcher_name").withColumnRenamed("id", "researcher_id").withColumnRenamed("researchfield", "researcher_field").withColumn("source_type", lit("researcher")) 
+    # 4. Καθαρισμός και μετονομασία στηλών
+    companies_clean = startups_df.withColumnRenamed("name", "company_name") \
+        .withColumnRenamed("id", "company_id") \
+        .withColumnRenamed("industry", "company_industry") \
+        .withColumn("source_type", lit("start-up")) 
+
+    researchers_clean = researchers_df.withColumnRenamed("name", "researcher_name") \
+        .withColumnRenamed("id", "researcher_id") \
+        .withColumnRenamed("researchfield", "researcher_field") \
+        .withColumn("source_type", lit("researcher")) 
+
     return companies_clean, researchers_clean
 
 def join_dfs(companies_clean, researchers_clean):
@@ -483,9 +508,9 @@ def run_lsh_minhash(df, input_name, input_neighbor):
 
 
 def run_logic(input_industry, input_radioOption, input_algorithms, input_name, input_neighbor,
-              input_k_min=None, input_k_max=None, input_seed=None, input_maxIter=None, input_sample_frac=None):
+              input_k_min=None, input_k_max=None, input_seed=None, input_maxIter=None, input_sample_frac=None,input_file_size=None):
     
-    companies_clean, researchers_clean = parse_data()
+    companies_clean, researchers_clean = parse_data(input_file_size)
     join_df = join_dfs(companies_clean, researchers_clean)
     join_df = join_df.repartition(partition)
     feature_df = preprocessing(join_df)
@@ -565,11 +590,11 @@ spark = (
     .config("spark.speculation", "false")
     .getOrCreate()
 )
+
 #spark = SparkSession.builder.appName(f"Benchmark_Cores").master(f"local[{CORES}]").getOrCreate()
 # -------------------------------------------------------------------------
 # 4. ΔΙΟΡΘΩΣΗ main: Προσομοίωση παραμέτρων από Front-end
 # -------------------------------------------------------------------------
-
 def main():
     # Βασικά Inputs
     input_industry = "Advertising & Marketing"
@@ -589,7 +614,7 @@ def main():
     input_seed_input = None     # Αν None -> θα πάρει default 42
     input_maxIter_input = None  # Αν None -> θα πάρει default 20
     input_sample_frac_input = None # Αν None -> θα πάρει default 1.0
-
+    input_file_size= None
     print(f"Running for: Industry={input_industry}, Name={input_name}, Algos={input_algorithms}")
     
     # Κλήση της run_logic με τα ορίσματα
@@ -598,7 +623,8 @@ def main():
               input_k_max=input_k_max_input, 
               input_seed=input_seed_input, 
               input_maxIter=input_maxIter_input, 
-              input_sample_frac=input_sample_frac_input)
+              input_sample_frac=input_sample_frac_input,
+              input_file_size=input_file_size)
 
 if __name__ == "__main__":
     # 1. Διαβάζουμε τις παραμέτρους από το CSV

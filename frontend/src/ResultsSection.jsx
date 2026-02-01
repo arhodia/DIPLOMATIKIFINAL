@@ -9,6 +9,7 @@ import MetricSection from './MetricSection';
 import TablesSection from './TablesSection';
 import ScatterSection from './ScatterSection';
 import TableClustering from './TableClustering';
+import BarPlot from './BarPlot';
 
 
 
@@ -36,21 +37,38 @@ const ResultsSection = ({ allAlgorithmsData }) => {
   return (
     <Box sx={{ flexGrow: 1, p: 3 }}>
       <Typography variant="h4" sx={{ mb: 4, textAlign: 'center', fontWeight: 'bold' }}>
-        Dashboard Ανάλυσης
+        Dashboard Analysis
       </Typography>
 
       <Box sx={{ flexGrow: 1 }}>
      
-          <Grid container spacing={2} columns={16}> 
-            <Grid size={8}>
-              <Item><GeneralResults allAlgorithmsData={allAlgorithmsData} /></Item>
-            </Grid>
-            <Grid size={8}>
-              <Item>size=8</Item>
-            </Grid>
+          <Grid container spacing={2} columns={16} sx={{ alignItems: 'stretch' }}> 
+          <Grid size={8} sx={{ display: 'flex' }}>
+            <Item sx={{ 
+              flexGrow: 1, 
+              display: 'flex', 
+              flexDirection: 'column',
+              height: '100%',
+              minHeight: '400px' // Όρισε ένα ελάχιστο ύψος που να βολεύει το γράφημα
+            }}>
+              <GeneralResults allAlgorithmsData={allAlgorithmsData} />
+            </Item>
           </Grid>
+          
+          <Grid size={8} sx={{ display: 'flex' }}>
+            <Item sx={{ 
+              flexGrow: 1, 
+              display: 'flex', 
+              flexDirection: 'column',
+              height: '100%',
+              minHeight: '400px'
+            }}>
+              <BarPlot allAlgorithmsData={allAlgorithmsData} />
+            </Item>
+          </Grid>
+        </Grid>
 
-          <Grid container spacing={2} columns={16} sx={{ mt: 2 }}> {/* Πρόσθεσα mt: 2 για λίγο κενό μεταξύ των containers */}
+          <Grid container spacing={2} columns={16} sx={{ mt: 2 ,alignItems: 'stretch'}}> {/* Πρόσθεσα mt: 2 για λίγο κενό μεταξύ των containers */}
             <Grid size={16}>
               <Grid container spacing={2} columns={16} sx={{ mt: 2 }}>
                 {/* Πρώτη στήλη: 50% του πλάτους */}
@@ -78,7 +96,7 @@ const ResultsSection = ({ allAlgorithmsData }) => {
                             <Grid container spacing={2} direction="column">
                               {/* 1η Γραμμή Αριστερά: KMeans Scatter */}
                               <Grid>
-                                <Item>
+                                <Item sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                                   <ScatterSection 
                                     allAlgorithmsData={allAlgorithmsData} 
                                     algorithmType="KMeans" 
@@ -89,7 +107,7 @@ const ResultsSection = ({ allAlgorithmsData }) => {
                               {/* 2η Γραμμή Αριστερά: Tables Section */}
                               <Grid size={12}>
                                 <Grid >
-                                  <Item>
+                                  <Item sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                                     <TableClustering 
                                       allAlgorithmsData={allAlgorithmsData} 
                                       algorithm="KMeans" 
@@ -99,7 +117,7 @@ const ResultsSection = ({ allAlgorithmsData }) => {
                                 </Grid>
 
                                 <Grid >
-                                  <Item>
+                                  <Item sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                                     <TableClustering 
                                       allAlgorithmsData={allAlgorithmsData} 
                                       algorithm="KMeans" 
@@ -117,7 +135,7 @@ const ResultsSection = ({ allAlgorithmsData }) => {
                             <Grid container spacing={2} direction="column">
                               {/* 1η Γραμμή Δεξιά: BisectingKMeans Scatter */}
                               <Grid>
-                                <Item>
+                                <Item sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                                   <ScatterSection 
                                     allAlgorithmsData={allAlgorithmsData} 
                                     algorithmType="BisectingKMeans" 
@@ -128,7 +146,7 @@ const ResultsSection = ({ allAlgorithmsData }) => {
                               {/* 2η Γραμμή Αριστερά: Tables Section */}
                                <Grid size={12}>
                                 <Grid >
-                                  <Item>
+                                  <Item sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                                     <TableClustering 
                                       allAlgorithmsData={allAlgorithmsData} 
                                       algorithm="BisectingKMeans" 
@@ -138,7 +156,7 @@ const ResultsSection = ({ allAlgorithmsData }) => {
                                 </Grid>
 
                                 <Grid >
-                                  <Item>
+                                  <Item sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                                     <TableClustering 
                                       allAlgorithmsData={allAlgorithmsData} 
                                       algorithm="BisectingKMeans" 
@@ -157,35 +175,53 @@ const ResultsSection = ({ allAlgorithmsData }) => {
 
                     </Grid>
                   </Item>
-                </Grid>
+               </Grid>
 
                 {/* Δεύτερη στήλη: 25% του πλάτους */}
                 <Grid size={4}>
-                <Item sx={{ height: '100%', overflow: 'hidden' }}>
-                  <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: 'secondary.main' }}>
+                <Item sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                  {/* Το Typography μένει πάντα πάνω επειδή είναι το πρώτο στοιχείο */}
+                  <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: 'secondary.main', textAlign: 'center' }}>
                     LSH BRP Results
                   </Typography>
-                  {/* Καλούμε το TablesSection με tableType="brp" */}
-                  <TablesSection 
-                    allAlgorithmsData={allAlgorithmsData} 
-                    tableType="brp" 
-                  />
+
+                  {/* Το Box αυτό θα "μεγαλώσει" για να καλύψει όλο τον εναπομείναντα χώρο 
+                      και θα κεντράρει τον πίνακα μέσα του */}
+                  <Box sx={{ 
+                    flexGrow: 1, 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    justifyContent: 'center', // Κεντράρισμα πίνακα καθ' ύψος στον χώρο που περισσεύει
+                    width: '100%' 
+                  }}>
+                    <TablesSection 
+                      allAlgorithmsData={allAlgorithmsData} 
+                      tableType="brp" 
+                    />
+                  </Box>
                 </Item>
-                </Grid>
+              </Grid>
 
                 {/* Τρίτη στήλη: 25% του πλάτους */}
                 <Grid size={4}>
-                <Item sx={{ height: '100%', overflow: 'hidden' }}>
-                  <Typography variant="h6" sx={{ mb: 2, fontWeight: 'bold', color: 'secondary.main' }}>
-                    LSH MiniHash Results
-                  </Typography>
-                  {/* Καλούμε το TablesSection με tableType="minihash" */}
-                  <TablesSection 
-                    allAlgorithmsData={allAlgorithmsData} 
-                    tableType="minihash" 
-                  />
-                </Item>
-              </Grid>
+                  <Item sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <Typography variant="h6" sx={{ mb: 2 }}>
+                      LSH MiniHash Results
+                    </Typography>
+                    <Box sx={{ 
+                    flexGrow: 1, 
+                    display: 'flex', 
+                    flexDirection: 'column', 
+                    justifyContent: 'center', // Κεντράρισμα πίνακα καθ' ύψος στον χώρο που περισσεύει
+                    width: '100%' 
+                  }}>
+                      <TablesSection 
+                        allAlgorithmsData={allAlgorithmsData} 
+                        tableType="minihash" 
+                      />
+                    </Box>
+                  </Item>
+                </Grid>
               </Grid>
             </Grid>
           </Grid>

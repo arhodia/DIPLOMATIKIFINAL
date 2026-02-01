@@ -141,6 +141,7 @@ def test():
     input_seed = clean_param(data.get('seed'), int)
     input_maxIter = clean_param(data.get('maxIter'), int)
     input_sample_frac = clean_param(data.get('sample_frac'), float)
+    input_file_size= clean_param(data.get('file_size'), float)
 
     try:
         neighbor = int(float(neighbor_raw))
@@ -154,9 +155,9 @@ def test():
     
     # Εγγραφή parameter.csv
     header = ['industry', 'algorithms', 'radioOption', 'name', 'neighbor',
-              'k_min', 'k_max', 'seed', 'maxIter', 'sample_frac']
+              'k_min', 'k_max', 'seed', 'maxIter', 'sample_frac','file_size']
     row = [industry, algorithms, radioOption, name, neighbor,
-           input_k_min, input_k_max, input_seed, input_maxIter, input_sample_frac]
+           input_k_min, input_k_max, input_seed, input_maxIter, input_sample_frac,input_file_size]
 
     try:
         with open(csv_file_path, mode='w', newline='', encoding='utf-8') as f:

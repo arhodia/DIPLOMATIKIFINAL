@@ -15,7 +15,8 @@ const FacultyDashboard = () => {
     k_max:'',
     seed:'',
     maxIter:'',
-    sample_frac:''
+    sample_frac:'',
+    file_size:''
   });
 
   const [allData, setAllData] = useState(null);

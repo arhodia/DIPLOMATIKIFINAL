@@ -87,7 +87,7 @@ const DashboardHeader = ({ filters, onFilterChange, onSubmit }) => {
   ];
 
   const ALGORITHMS = ["LSH_BRP", "LSH_MinHash", "KMeans", "BisectingKMeans"];
-
+  const FILE_SIZES = ["5000", "20000", "50000"];
   // --- Configuration για όλα τα Slider Inputs ---
   // Εδώ ορίζεις τα όρια (min, max, step) για το κάθε πεδίο
   const SLIDER_FIELDS = [
@@ -222,6 +222,26 @@ const DashboardHeader = ({ filters, onFilterChange, onSubmit }) => {
             onGenericChange={handleGenericChange}
           />
         ))}
+
+        {/* 6. File Size Select - Το νέο πεδίο */}
+        <Select
+        size="small"
+        value={filters.file_size || ""} // Changed from fileSize
+        onChange={(e) => onFilterChange('file_size', e.target.value)} // Changed from fileSize
+        displayEmpty
+        sx={{ minWidth: 120 }}
+      >
+        <MenuItem value="" sx={{ display: 'none' }}>
+          <em>File Size</em>
+        </MenuItem>
+        {FILE_SIZES.map((size) => (
+          <MenuItem key={size} value={size}>
+            {size}
+          </MenuItem>
+        ))}
+      </Select>
+
+
 
       </Box>
 

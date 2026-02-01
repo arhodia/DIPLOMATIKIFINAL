@@ -47,12 +47,12 @@ const StickyTable = ({ title, data }) => {
   if (!data || data.length === 0) return null;
 
   return (
-    <Box sx={{ mb: 4 }}>
+    <Box sx={{ mb: 0 }}>
       <Typography variant="h6" gutterBottom sx={{ color: 'white', ml: 1 }}>
         {title}
       </Typography>
       <Paper sx={{ width: '100%', overflow: 'hidden', bgcolor: 'background.paper' }}>
-        <TableContainer sx={{ maxHeight: 440 }}>
+        <TableContainer sx={{ height: 400, overflow: 'auto' }}>
           <Table stickyHeader aria-label="sticky table">
             <TableHead>
               <TableRow>
