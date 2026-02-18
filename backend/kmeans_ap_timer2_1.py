@@ -21,9 +21,7 @@ import json
 import os
 matplotlib.use('Agg')
 from pyspark.sql.functions import lit
-# --- Βοηθητικές Συναρτήσεις (Plot, Parse, Join, Preprocessing, Tune) ---
-# Αυτές παραμένουν ίδιες, τις αφήνω ως έχουν για συντομία, 
-# εστιάζουμε στις αλλαγές από το find_best_k και κάτω.
+
 def get_cluster_data_for_react(predictions_df, model, algorithm_name="KMeans"):
     # 1. PCA για τα σημεία
     pca = PCA(k=2, inputCol="features_norm", outputCol="pca_features")
@@ -50,7 +48,7 @@ def get_cluster_data_for_react(predictions_df, model, algorithm_name="KMeans"):
 
     # 2. Επεξεργασία Κέντρων (Centroids)
     centers = model.clusterCenters()
-    # Μετατρέπουμε τα κέντρα σε Spark Vectors για να τα περάσουμε από το PCA μοντέλο
+    # Μετατροπή  κέντρων σε Spark Vectors ωστε να γίνει PCA μοντέλο
     centers_vec = [Vectors.dense(c) for c in centers]
     centers_df = spark.createDataFrame([(i, v) for i, v in enumerate(centers_vec)], ["id", "features_norm"])
     
@@ -64,7 +62,7 @@ def get_cluster_data_for_react(predictions_df, model, algorithm_name="KMeans"):
         "label": "Centroids",
         "data": pca_centers[['x', 'y']].to_dict(orient='records'),
         "id": "centroids",
-        "color": "#000000", # Μαύρο χρώμα για να ξεχωρίζουν
+        "color": "#000000",
     })
         
     return chart_data
@@ -170,18 +168,15 @@ def plot_kmeans_metrics(metrics, best_k, algorithm="KMeans", save_path=None):
 """
 def parse_parameter():
     # Διαβάζουμε το CSV με το Spark
-    # Το inferSchema είναι σημαντικό για να αναγνωρίσει τα int/float αυτόματα
     parameter_df = spark.read.format("csv") \
         .option("header", "true") \
         .option("inferSchema", "true") \
         .load("/data/parameter.csv")
     
-    # Ελέγχουμε αν το αρχείο είναι άδειο
     if parameter_df.head(1) == 0:
         print("Warning: parameter.csv is empty")
         return None
 
-    # Παίρνουμε την πρώτη (και μοναδική) γραμμή
     row = parameter_df.collect()[0]
 
     # Επεξεργασία του πεδίου algorithms (από "KMeans,LSH" σε ['KMeans', 'LSH'])
@@ -198,7 +193,6 @@ def parse_parameter():
         "input_algorithms": algos_list,
         "input_name": row['name'],
         "input_neighbor": row['neighbor'],
-        # Προαιρετικές παράμετροι (αν είναι null στο csv, θα γίνουν None εδώ)
         "input_k_min": row['k_min'],
         "input_k_max": row['k_max'],
         "input_seed": row['seed'],
@@ -223,7 +217,7 @@ def parse_data(input_file_size):
         # This will now only trigger if a WRONG number is provided
         raise ValueError("Unsupported input_file_size. Choose 5000, 20000, or 50000.")
 
-    # 2. Φόρτωση των Startups (παραμένει σταθερό)
+    # 2. Φόρτωση των Startups
     startups_df = spark.read.format("csv") \
         .option("header", "true") \
         .option("inferSchema", "true") \
@@ -270,7 +264,6 @@ def preprocessing(join_df):
     return feature_df
 
 def tune_hyperparameters(df, algorithm, init_k):
-    # ... (Κώδικας tune ως έχει) ...
     print(f"\n--- 🔍 Tuning Hyperparameters for {algorithm} ---")
     param_grid = {
         'seed': [42, 123],              
@@ -307,13 +300,18 @@ def tune_hyperparameters(df, algorithm, init_k):
 
 def find_best_k(df, algorithm, k_min=None, k_max=None, seed=None, maxIter=None, sample_frac=None, distance="cosine"):
     
-    # --- LOGIC: Αν είναι None πάρε το Default, αλλιώς κράτα την τιμή ---
+    if k_min is None or k_min < 2:
+        k_min = 2
+    
+    k_max = k_max if k_max is not None else 25
+    seed = seed if seed is not None else 42
+    maxIter = maxIter if maxIter is not None else 20
+    sample_frac = sample_frac if sample_frac is not None else 1.0
     k_min = k_min if k_min is not None else 2
     k_max = k_max if k_max is not None else 25
     seed = seed if seed is not None else 42
     maxIter = maxIter if maxIter is not None else 20
     sample_frac = sample_frac if sample_frac is not None else 1.0
-    # -------------------------------------------------------------------
 
     AlgoClass = globals()[algorithm]
     train_df = df.sample(False, sample_frac, seed=seed).cache() if sample_frac < 1.0 else df
@@ -353,24 +351,16 @@ def find_best_k(df, algorithm, k_min=None, k_max=None, seed=None, maxIter=None, 
 def clustering_algo(feature_df, algorithm, input_industry, input_name, input_radioOption, 
                     input_k_min=None, input_k_max=None, input_seed=None, input_maxIter=None, input_sample_frac=None):
     
-    # --- 1. Αρχικοποίηση & Hyperparameter Tuning ---
     df_hyper = pd.DataFrame()
     AlgoClass = globals()[algorithm]
     
-    # Τρέχουμε το tuning για να βρούμε τα "ιδανικά" (σε περίπτωση που ο χρήστης δεν έδωσε δικά του)
     tuned_seed, tuned_maxIter, tuned_sample_frac = tune_hyperparameters(feature_df, algorithm, init_k=10)
     
-    # --- LOGIC: Προτεραιότητα: Χρήστης > Tuned ---
-    # Αν ο χρήστης έδωσε (δεν είναι None), παίρνουμε του χρήστη.
-    # Αν ο χρήστης ΔΕΝ έδωσε (είναι None), παίρνουμε από το tuning.
     final_seed = input_seed if input_seed is not None else tuned_seed
     final_maxIter = input_maxIter if input_maxIter is not None else tuned_maxIter
     final_sample_frac = input_sample_frac if input_sample_frac is not None else tuned_sample_frac
     
-    # Σημείωση: Τα input_k_min / input_k_max τα περνάμε ως έχουν (None ή τιμή) 
-    # γιατί η find_best_k έχει δική της logic για τα defaults (2 και 20).
-    
-    # Καλούμε την find_best_k με τις ΤΕΛΙΚΕΣ τιμές
+
     best_k, best_score, metrics = find_best_k(
         feature_df, 
         algorithm, 
@@ -391,7 +381,7 @@ def clustering_algo(feature_df, algorithm, input_industry, input_name, input_rad
         "best_score": best_score 
     }])
     
-    # --- 2. Ρύθμιση Estimator με τα FINAL params ---
+
     if algorithm == 'KMeans':   
         estimator = (AlgoClass().setK(best_k).setSeed(final_seed).setFeaturesCol("features_norm").setPredictionCol("prediction").setMaxIter(final_maxIter).setInitMode("k-means||"))
     elif algorithm == 'BisectingKMeans':   
@@ -436,7 +426,7 @@ def clustering_algo(feature_df, algorithm, input_industry, input_name, input_rad
     """
     final_df = joined_df.withColumn("distance_to_center", expr(distance_expression)).drop("features_arr", "center_id", "center_vec")
     
-    # --- 4. Matching Logic ---
+    # 4.Matching Logic
     top_matches_df = None
     recommended_matches_df = None
     
@@ -468,9 +458,8 @@ def clustering_algo(feature_df, algorithm, input_industry, input_name, input_rad
     chart_data = get_cluster_data_for_react(predictions_df, model, algorithm)
     return centers_df, final_df, end_time - start_time, df_hyper, top_matches_df, recommended_matches_df, chart_data
 
-def run_lsh_brp(df, input_name, input_neighbor):
-    # (Κώδικας LSH BRP ως έχει)
-    print(f"\n--- ⚡ Running LSH: Bucketed Random Projection (Cosine/L2) ---")
+def run_lsh_brp(df, input_name,input_radioOption ,input_neighbor):
+    print(f"\n Running LSH: Bucketed Random Projection (Cosine/L2)")
     brp = BucketedRandomProjectionLSH(inputCol="features_norm", outputCol="hashes_brp", bucketLength=2.0, numHashTables=3, seed=42)
     start_time = time.time()
     model = brp.fit(df)
@@ -481,9 +470,14 @@ def run_lsh_brp(df, input_name, input_neighbor):
         if query_row:
             query_vec = query_row['features_norm']
             neighbors = model.approxNearestNeighbors(df, query_vec, input_neighbor)
-            print(f"   ✅ BRP Neighbors Found")
+            
+            print(f"✅ BRP Neighbors Found")
         else:
-            print("   ❌ Target not found.")
+            print("❌ Target not found.")
+    
+    #ΠΡΟΣΘΗΚΗ DROP ΣΤΗΛΩΝ
+    cols_to_drop = ["filtered_words", "features", "features_sparse", "features_norm", "hashes_mh"]
+    df_transformed = df_transformed.drop(*[c for c in cols_to_drop if c in df_transformed.columns])
     end_time = time.time()        
     return df_transformed, end_time - start_time
 
@@ -503,9 +497,11 @@ def run_lsh_minhash(df, input_name, input_neighbor):
             print(f"   ✅ MinHash Neighbors Found")
         else:
             print("   ❌ Target not found.")
+    cols_to_drop = ["filtered_words", "features", "features_sparse", "features_norm", "hashes_mh"]
+    # Χρησιμοποιούμε λίστα κατανόησης για να αποφύγουμε σφάλμα αν κάποια στήλη δεν υπάρχει
+    df_transformed = df_transformed.drop(*[c for c in cols_to_drop if c in df_transformed.columns])        
     end_time = time.time()
     return df_transformed , end_time - start_time
-
 
 def run_logic(input_industry, input_radioOption, input_algorithms, input_name, input_neighbor,
               input_k_min=None, input_k_max=None, input_seed=None, input_maxIter=None, input_sample_frac=None,input_file_size=None):
@@ -560,7 +556,7 @@ def run_logic(input_industry, input_radioOption, input_algorithms, input_name, i
                 
                 final_rec_matches_dict[algo] = clean_rec_df.toPandas().fillna(0).to_dict(orient='records')
         elif algo == 'LSH_BRP':
-            df_lsh_brp, time_lsh_brp = run_lsh_brp(feature_df, input_name, input_neighbor)
+            df_lsh_brp, time_lsh_brp = run_lsh_brp(feature_df, input_name, input_radioOption,input_neighbor)
             execution_time.append([algo, time_lsh_brp])
 
         elif algo == 'LSH_MinHash':
@@ -575,26 +571,21 @@ def run_logic(input_industry, input_radioOption, input_algorithms, input_name, i
 
 # --- Main Spark Init ---
 CORES = 4
-#spark = SparkSession.builder.appName(f"Benchmark_Cores").master(f"local[{CORES}]").getOrCreate()
 partition = CORES * 2
-
 spark = (
     SparkSession.builder
     .appName("bench")
     .master("spark://spark-master:7077")
-    .config("spark.executor.instances", "2")
-    .config("spark.executor.cores", "1")
-    .config("spark.executor.memory", "1g")
-    .config("spark.driver.memory", "1g")
+    .config("spark.executor.instances", "4")
+    .config("spark.executor.cores", "4")
+    .config("spark.executor.memory", "6g")
+    .config("spark.driver.memory", "6g")
     .config("spark.dynamicAllocation.enabled", "false")
     .config("spark.speculation", "false")
     .getOrCreate()
 )
 
-#spark = SparkSession.builder.appName(f"Benchmark_Cores").master(f"local[{CORES}]").getOrCreate()
-# -------------------------------------------------------------------------
-# 4. ΔΙΟΡΘΩΣΗ main: Προσομοίωση παραμέτρων από Front-end
-# -------------------------------------------------------------------------
+
 def main():
     # Βασικά Inputs
     input_industry = "Advertising & Marketing"
@@ -604,13 +595,8 @@ def main():
     input_neighbor = 5
     
     # Παράμετροι που έρχονται από το Front-End (Advanced Settings)
-    # ΔΟΚΙΜΗ: Βάλτε τιμές ή None για να δείτε τη διαφορά
-    
-    # Π.χ. Ο χρήστης άφησε κενά τα k_min/k_max (θα πάρει 2, 20)
     input_k_min_input = None 
     input_k_max_input = None
-    
-    # Π.χ. Ο χρήστης όρισε συγκεκριμένο Seed και Iterations
     input_seed_input = None     # Αν None -> θα πάρει default 42
     input_maxIter_input = None  # Αν None -> θα πάρει default 20
     input_sample_frac_input = None # Αν None -> θα πάρει default 1.0
@@ -627,7 +613,6 @@ def main():
               input_file_size=input_file_size)
 
 if __name__ == "__main__":
-    # 1. Διαβάζουμε τις παραμέτρους από το CSV
     params = parse_parameter()
     
     print("--- DEBUG: Running with parameters: ---")
@@ -635,7 +620,7 @@ if __name__ == "__main__":
     print("---------------------------------------")
 
     if params:
-        # ΚΑΘΑΡΙΣΜΟΣ ΠΑΛΙΩΝ ΑΠΟΤΕΛΕΣΜΑΤΩΝ ΠΡΙΝ ΤΗΝ ΕΚΤΕΛΕΣΗ
+
         results_path = "/data/results/"
         if not os.path.exists(results_path):
             os.makedirs(results_path)
@@ -643,12 +628,9 @@ if __name__ == "__main__":
             file_path = os.path.join(results_path, f)
             if os.path.isfile(file_path):
                 os.unlink(file_path)
-        # 2. Τρέχουμε τη λογική
+     
         df_hyper, top_matches, rec_matches, exec_time, df_brp, df_minihash, charts = run_logic(**params)
-        
-        # 3. ΣΩΖΟΥΜΕ ΤΑ ΑΠΟΤΕΛΕΣΜΑΤΑ ΣΤΟ /data/
-        # Έτσι ώστε το Flask να μπορεί να τα βρει μετά
-        
+       
         print("--- Saving outputs to /data/results/ ---")
 
         # Α. Hyperparameters (Είναι Pandas DataFrame)
@@ -674,9 +656,6 @@ if __name__ == "__main__":
         with open('/data/results/output_time.json', 'w') as f:
             json.dump(exec_time, f)
 
-        # Ε. Charts (Λεξικό -> JSON)
-        # Προσοχή: Το charts μπορεί να έχει μέσα αντικείμενα που δεν γίνονται json serializable απευθείας.
-        # Αν είναι απλά strings/numbers είναι οκ.
         try:
             with open('/data/results/output_charts.json', 'w') as f:
                 json.dump(charts, f)
