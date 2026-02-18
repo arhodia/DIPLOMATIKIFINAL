@@ -76,7 +76,7 @@ def test():
         "-f", "/mnt/c/Users/arhod/Desktop/arhodia/docker/docker-compose.yml",
         "run", "--rm",
         "spark-client",
-        "python3", "/data/backend/kmeans_ap_timer2_1.py"
+        "python3", "/data/backend/algorithms.py"
     ]
     
     try:
